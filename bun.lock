@@ -391,6 +391,7 @@
         "@form-create/element-ui": "^3",
         "@tabler/icons-vue": "^3.46.0",
         "@toonflow/model-icons": "workspace:*",
+        "@toonflow/providers": "workspace:*",
         "vue-draggable-plus": "^0.6.1",
         "x-sender": "1.4.6",
       },

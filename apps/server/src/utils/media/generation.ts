@@ -3,6 +3,7 @@ import { mkdir, readFile, realpath, stat, unlink } from "@toonflow/file";
 import { join, relative } from "node:path";
 import { createHash } from "node:crypto";
 import { mediaProviders, type Provider, type ProviderTaskData } from "@toonflow/providers";
+import { assertGenerationGuard } from "@toonflow/providers/generationGuard";
 import type { GeneratedMedia, MediaGenerationRequest, MediaModel, MediaReference } from "@toonflow/tools-scaffold/runtime";
 import conf from "@/utils/conf";
 import { getAccountProvider } from "@/utils/ai";
@@ -35,6 +36,25 @@ const mediaExtensions: Record<string, string> = {
 
 function invalid(message: string): never {
   throw Object.assign(new Error(message), { status: 400 });
+}
+
+function guardReferences(request: MediaGenerationRequest, mediaType: "image" | "video") {
+  if (mediaType === "video" && request.referenceOrder) {
+    const media = { image: request.images, video: request.videos, audio: request.audios };
+    return {
+      references: request.referenceOrder.map(reference => {
+        if (reference.type === "text") return { dataType: "STRING", value: true };
+        if (reference.type === "firstFrame") return { dataType: "IMAGE", value: request.firstFrame };
+        if (reference.type === "lastFrame") return { dataType: "IMAGE", value: request.lastFrame };
+        if (!("index" in reference)) return { dataType: "STRING", value: undefined };
+        const value = media[reference.type]?.[reference.index];
+        const dataType = reference.type === "image" ? "IMAGE" : reference.type === "video" ? "VIDEO" : "AUDIO";
+        return { dataType, value };
+      }),
+    };
+  }
+  const imageCount = (request.images?.length ?? 0) + (request.firstFrame ? 1 : 0) + (request.lastFrame ? 1 : 0);
+  return { imageCount };
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -145,7 +165,7 @@ function resumableAssets(assets: MediaAsset[], mediaType: "image" | "video" | "a
 async function prepareRequest<T>(directory: string | undefined, mediaType: "image" | "video" | "audio", request: MediaGenerationRequest,
   read: (cwd: string, reference: MediaReference, type: string, signal?: AbortSignal) => Promise<T>, signal?: AbortSignal) {
   // ACT: 仅向已适配引用映射的内置供应商传递，其他第三方适配器仍接收原有公共参数。
-  const referenceOrder = mediaType === "video" && ["toonflow", "apiMart", "metaso", "compshare"].includes(request.providerId) ? request.referenceOrder : undefined;
+  const referenceOrder = mediaType === "video" && ["toonflow", "apiMart", "metaso", "compshare", "grsai"].includes(request.providerId) ? request.referenceOrder : undefined;
   if (referenceOrder) {
     const media = { image: request.images, video: request.videos, audio: request.audios };
     for (const [index, reference] of referenceOrder.entries()) {
@@ -266,6 +286,10 @@ export async function generateMedia(
       if (typeof generate !== "function") invalid(t`此供应商不支持${translateMessage({ image: "图片", video: "视频", audio: "音频" }[mediaType])}生成`);
       const rules = Array.isArray(provider.rules) ? provider.rules : [];
       if (rules.some(rule => rule.field === "apiKey") && (typeof provider.config.apiKey !== "string" || !provider.config.apiKey.trim())) invalid("请先在媒体模型设置中配置供应商 API Key");
+      if (mediaType !== "audio") {
+        try { assertGenerationGuard(request.prompt, guardReferences(request, mediaType)); }
+        catch (error) { invalid(error instanceof Error ? error.message : "生成提示词未通过校验"); }
+      }
       const { type, ...parameters } = await prepareRequest(directory, mediaType, request, readReference, signal);
       signal?.throwIfAborted();
       finish = beginGeneration(provider);

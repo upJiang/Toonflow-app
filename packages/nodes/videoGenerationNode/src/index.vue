@@ -116,6 +116,7 @@ import { showNodeError } from "@toonflow/node-shared/showNodeError";
 import { useNodeGeneration } from "@toonflow/node-shared/useNodeGeneration";
 import { useModelForm } from "@toonflow/node-shared/useModelForm";
 import { useNodeReferences } from "@toonflow/node-shared/useNodeReferences";
+import { assertGenerationGuard } from "@toonflow/node-shared/generationGuard";
 import { getPromptText } from "@toonflow/node-shared/promptText";
 import promptInput from "@toonflow/node-shared/promptInput";
 import videoPlayer from "@toonflow/node-video/videoPlayer";
@@ -366,6 +367,7 @@ async function startGeneration() {
   const input = getGenerationInput(prompt);
   if (!choice || !input) throw new Error("请先选择视频模型");
   if (!input.prompt) throw new Error("请输入生成提示词");
+  assertGenerationGuard(prompt, { references: refList.value.map(item => ({ dataType: item.dataType, value: item.value })) });
   if (refList.value.some(item => item.value === undefined)) throw new Error("引用节点暂无内容，请先补充引用内容");
   for (const match of input.prompt.matchAll(/\{\{ref (\d+)\}\}/g)) {
     const reference = refList.value[Number(match[1]) - 1];

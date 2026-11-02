@@ -127,6 +127,7 @@ import modelLabel from "@toonflow/node-shared/modelLabel";
 import { showNodeError } from "@toonflow/node-shared/showNodeError";
 import { useNodeGeneration } from "@toonflow/node-shared/useNodeGeneration";
 import { useNodeReferences } from "@toonflow/node-shared/useNodeReferences";
+import { assertGenerationGuard } from "@toonflow/node-shared/generationGuard";
 import { useModelForm } from "@toonflow/node-shared/useModelForm";
 import promptInput from "@toonflow/node-shared/promptInput";
 import referenceItem from "@toonflow/node-shared/referenceItem";
@@ -333,6 +334,7 @@ async function confirmInpaint() {
   if (inpaintEditor.busy || generating.value || deleting.value || uploading.value) return;
   if (!generationPrompt.value) throw new Error("请输入重绘提示词");
   if (refList.value.some(item => item.value === undefined)) throw new Error("引用节点暂无内容，请先补充引用内容");
+  assertGenerationGuard(data.value.inpaintPrompt, { references: refList.value.map(item => ({ dataType: item.dataType, value: item.value })) });
   let prompt = generationPrompt.value.replace(/\{\{ref (\d+)\}\}/g, "重绘参考 $1").replace(/^参考 (\d+)：/gm, "重绘参考 $1：");
   const images = refList.value.flatMap(item => item.dataType === "IMAGE" && item.value ? [{ path: item.value.url, mimeType: item.value.mimeType }] : []);
   const imageReferences = refList.value.flatMap((item, index) => item.dataType === "IMAGE" && item.value ? [index + 1] : []);
@@ -358,6 +360,7 @@ async function startGeneration() {
   if (!generationPrompt.value) throw new Error("请输入生成提示词");
   const references = refList.value.filter(item => !data.value.inpaint || item.dataType !== "IMAGE" || item.value?.url !== data.value.inpaint.source);
   if (references.some(item => item.value === undefined)) throw new Error("引用节点暂无内容，请先补充引用内容");
+  assertGenerationGuard(data.value.prompt, { references: references.map(item => ({ dataType: item.dataType, value: item.value })) });
   if (!input) throw new Error("请先选择图片模型");
   const workspace = files.getWorkspaceFiles();
   const controller = new AbortController();

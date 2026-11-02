@@ -19,7 +19,8 @@
     "./useNodeGeneration": "./src/useNodeGeneration.ts",
     "./useModelForm": "./src/useModelForm.ts",
     "./useAudioTranscription": "./src/useAudioTranscription.ts",
-    "./groupNodeModels": "./src/groupNodeModels.ts"
+    "./groupNodeModels": "./src/groupNodeModels.ts",
+    "./generationGuard": "./src/generationGuard.ts"
   },
   "scripts": {
     "typecheck": "vue-tsc --noEmit"
@@ -33,6 +34,7 @@
     "@form-create/element-ui": "^3",
     "@tabler/icons-vue": "^3.46.0",
     "@toonflow/model-icons": "workspace:*",
+    "@toonflow/providers": "workspace:*",
     "vue-draggable-plus": "^0.6.1",
     "x-sender": "1.4.6"
   },

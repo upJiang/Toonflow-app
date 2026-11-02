@@ -1634,14 +1634,14 @@ async function generateH3Video(context: Context, request: VideoRequest, apiKey: 
   if (ratio) {
     body.ratio = ratio;
   }
-  // 提示词优化、Skill、静音、水印等按平台默认；如需开启可通过扩展参数传入
+  // 提示词优化、Skill、水印按平台默认。静音对应节点的 generateAudio：关闭时传 mute_audio。
   if (other.use_context_ir === true) {
     body.use_context_ir = true;
     if (typeof other.skill_id === "string" && other.skill_id) {
       body.skill_id = other.skill_id;
     }
   }
-  if (other.mute_audio === true) {
+  if (request.generateAudio === false || (request.generateAudio !== true && other.mute_audio === true)) {
     body.mute_audio = true;
   }
   if (request.watermark !== undefined) {
